@@ -1,176 +1,321 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Star, Loader2, AlertCircle } from 'lucide-react';
-import Logo from '../components/Logo';
+import { useNavigate } from 'react-router-dom';
+import { Sparkles, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Scissors } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
+type Tab = 'signin' | 'signup';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { signInWithGoogle, signInWithPhone, isMockMode } = useAuth();
+  const { signInWithEmail, signUpWithEmail } = useAuth();
 
-  const [phone, setPhone] = useState('');
+  const [tab, setTab] = useState<Tab>('signin');
+  const [salonName, setSalonName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPhone, setShowPhone] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleGoogleLogin = async () => {
-    setError(null);
-    setGoogleLoading(true);
-    const { error: err } = await signInWithGoogle();
-    if (err) {
-      setError(err);
-      setGoogleLoading(false);
-    }
-    // On success, Supabase redirects browser to /dashboard — no navigate() needed
-  };
-
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) { setError('Please enter a valid 10-digit number'); return; }
+    if (!email || !password) return setError('Please enter your email and password.');
     setLoading(true);
-    const { error: err } = await signInWithPhone(digits);
-    if (err) { setError(err); setLoading(false); return; }
-    navigate('/verify', { state: { phone: `+91${digits}` } });
+    const { error } = await signInWithEmail(email, password);
     setLoading(false);
+    if (error) return setError(error);
+    navigate('/dashboard');
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!salonName.trim()) return setError('Please enter your salon name.');
+    if (!email || !password) return setError('Email and password are required.');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
+    if (password !== confirm) return setError('Passwords do not match.');
+
+    setLoading(true);
+    const { error, needsVerification } = await signUpWithEmail(email, password, salonName);
+    setLoading(false);
+
+    if (error) return setError(error);
+
+    if (needsVerification) {
+      setSuccess(`Account created! Check your inbox at ${email} to verify, then sign in.`);
+      setTab('signin');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const switchTab = (t: Tab) => {
+    setTab(t);
+    setError(null);
+    setSuccess(null);
   };
 
   return (
-    <main className="min-h-screen flex flex-col md:flex-row w-full bg-surface-container-lowest text-on-surface">
-      {/* ── Left: Brand Panel ── */}
-      <section className="hidden md:flex flex-col w-[45%] bg-[#FDFAF6] p-16 relative items-center justify-center border-r border-surface-variant overflow-hidden">
-        {/* Ambient glow */}
-        <div className="absolute top-0 left-0 w-80 h-80 bg-primary/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 right-0 w-60 h-60 bg-[#C8922A]/10 rounded-full blur-[80px]" />
+    <div className="min-h-screen bg-surface flex items-stretch">
+      {/* ── Left panel ── */}
+      <div className="hidden lg:flex w-[45%] bg-gradient-to-br from-[#6750A4] via-[#7B61D9] to-[#9C88F0] p-12 flex-col justify-between relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
 
-        <div className="relative z-10 flex flex-col items-center mb-16">
-          <Logo className="w-[180px] object-contain mb-3" />
-          <span className="text-5xl text-tertiary-fixed-dim tracking-widest mt-1" style={{ fontFamily: "'Cormorant Garamond', serif" }}>نور</span>
-          <p className="mt-4 font-body-md text-sm text-on-surface-variant text-center max-w-[220px]">
-            AI Marketing Copilot for Indian Beauty Salons
-          </p>
-        </div>
-
-        <div className="relative z-10 bg-white/70 backdrop-blur-sm border border-[#EDE8E0] rounded-2xl p-6 max-w-[300px]">
-          <div className="flex gap-1 mb-3">
-            {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-[#C8922A] text-[#C8922A]" />)}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
+              <Sparkles size={22} className="text-white" />
+            </div>
+            <span className="text-white font-bold text-xl tracking-tight">Noor AI Copilot</span>
           </div>
-          <p className="font-body-md text-[15px] text-on-surface italic leading-relaxed mb-3">
-            "Pehle hafte mein 14 enquiries. Sach mein. Noor ne sab handle kar liya."
+
+          <h1 className="text-white font-bold text-[42px] leading-tight mb-6">
+            Your salon's<br />
+            <span className="text-white/70">AI marketing</span><br />
+            team
+          </h1>
+          <p className="text-white/70 text-lg leading-relaxed max-w-sm">
+            Generate ad copies, launch Meta campaigns, and broadcast to your clients — all in one place.
           </p>
-          <p className="font-label-sm text-xs text-on-surface-variant">— Ritu Sharma, Indore</p>
         </div>
 
-        <div className="relative z-10 mt-8 grid grid-cols-3 gap-4 text-center">
-          {[['₹63', 'Avg Cost/Lead'], ['48hrs', 'Campaign Live'], ['40%', 'Avg Bookings ↑']].map(([val, label]) => (
-            <div key={label}>
-              <p className="font-number-data text-xl text-primary font-bold">{val}</p>
-              <p className="font-label-sm text-[11px] text-on-surface-variant mt-0.5">{label}</p>
+        {/* Feature bullets */}
+        <div className="relative z-10 space-y-4">
+          {[
+            { icon: '🤖', text: 'AI-generated Hindi + English ad copy' },
+            { icon: '📸', text: 'Beautiful ad images with Imagen 3' },
+            { icon: '📲', text: 'WhatsApp broadcasts to your clients' },
+            { icon: '📊', text: 'Live campaign performance tracking' },
+          ].map(f => (
+            <div key={f.icon} className="flex items-center gap-3">
+              <span className="text-2xl">{f.icon}</span>
+              <span className="text-white/80 text-sm font-medium">{f.text}</span>
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* ── Right: Auth Panel ── */}
-      <section className="flex-1 flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-[420px]">
-          {/* Mobile Logo */}
-          <div className="md:hidden flex justify-center mb-10">
-            <Logo className="w-[140px] object-contain" />
+      {/* ── Right panel ── */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          {/* Logo for mobile */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <Sparkles size={22} className="text-primary" />
+            <span className="font-bold text-lg text-on-surface">Noor AI Copilot</span>
           </div>
 
-          <h1 className="font-h2 text-[32px] text-on-surface mb-2 text-center">Wapas aaiye 👋</h1>
-          <p className="text-center font-body-md text-sm text-on-surface-variant mb-8">
-            Apni salon ki marketing AI ke haath mein dein
-          </p>
-
-          {isMockMode && (
-            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2">
-              <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-              <p className="font-label-sm text-xs text-amber-700">
-                <strong>Setup required:</strong> Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env — then set up Google OAuth in Supabase Dashboard → Authentication → Providers.
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center gap-2">
-              <AlertCircle size={14} className="text-red-500 shrink-0" />
-              <p className="font-label-sm text-xs text-red-600">{error}</p>
-            </div>
-          )}
-
-          {/* Google Sign-In Button */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-outline-variant hover:border-primary/40 text-on-surface font-label-sm text-[15px] py-4 px-6 rounded-2xl transition-all duration-200 shadow-sm hover:shadow-md mb-4 disabled:opacity-60 disabled:cursor-not-allowed group"
-          >
-            {googleLoading ? (
-              <Loader2 size={20} className="animate-spin text-primary" />
-            ) : (
-              <svg viewBox="0 0 24 24" className="w-5 h-5">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-            )}
-            <span>{googleLoading ? 'Redirecting to Google...' : 'Google se Login Karo'}</span>
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-5">
-            <div className="h-px bg-outline-variant flex-1" />
-            <span className="font-body-md text-sm text-on-surface-variant">ya</span>
-            <div className="h-px bg-outline-variant flex-1" />
-          </div>
-
-          {/* Phone OTP Toggle */}
-          {!showPhone ? (
+          {/* Tab switcher */}
+          <div className="flex bg-surface-container rounded-xl p-1 mb-8 gap-1">
             <button
-              onClick={() => setShowPhone(true)}
-              className="w-full text-center font-label-sm text-sm text-primary hover:text-primary/80 transition-colors py-2"
+              onClick={() => switchTab('signin')}
+              className={`flex-1 py-2.5 rounded-lg font-label-sm text-sm font-semibold transition-all ${
+                tab === 'signin'
+                  ? 'bg-surface shadow-sm text-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
             >
-              📱 WhatsApp Number se Login Karo
+              Sign In
             </button>
-          ) : (
-            <form onSubmit={handleSendOTP} className="space-y-4">
+            <button
+              onClick={() => switchTab('signup')}
+              className={`flex-1 py-2.5 rounded-lg font-label-sm text-sm font-semibold transition-all ${
+                tab === 'signup'
+                  ? 'bg-surface shadow-sm text-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {/* Success message */}
+          {success && (
+            <div className="mb-5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+              <CheckCircle2 size={16} className="text-green-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-green-700">{success}</p>
+            </div>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div className="mb-5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {/* ── SIGN IN FORM ── */}
+          {tab === 'signin' && (
+            <form onSubmit={handleSignIn} className="space-y-4">
               <div>
-                <label className="block font-label-sm text-xs text-on-surface-variant mb-2 ml-1">WhatsApp Number</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-number-data text-sm text-on-surface-variant pointer-events-none">+91</span>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    value={phone}
-                    onChange={e => { setPhone(e.target.value.replace(/\D/g, '')); setError(null); }}
-                    placeholder="00000 00000"
-                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-outline-variant bg-surface-bright focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-number-data text-sm"
-                  />
+                <h2 className="font-h3 text-[26px] text-on-surface mb-1">Welcome back</h2>
+                <p className="text-on-surface-variant text-sm mb-6">Sign in to your Noor account</p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Email</label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-outline-variant rounded-xl text-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Password</label>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-11 py-3 border border-outline-variant rounded-xl text-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button type="button" onClick={() => setShowPw(p => !p)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
+
               <button
                 type="submit"
-                disabled={loading || phone.replace(/\D/g, '').length < 10}
-                className="w-full py-3.5 px-6 rounded-2xl bg-primary text-white font-label-sm text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all disabled:opacity-60 mt-2 shadow-lg shadow-primary/20"
               >
-                {loading ? <><Loader2 size={16} className="animate-spin" /> Sending...</> : <>OTP Bhejo <ArrowRight size={16} /></>}
+                {loading ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Sign In <ArrowRight size={16} /></>
+                )}
               </button>
+
+              <p className="text-center text-xs text-on-surface-variant mt-4">
+                Don't have an account?{' '}
+                <button type="button" onClick={() => switchTab('signup')} className="text-primary font-semibold hover:underline">
+                  Create one free
+                </button>
+              </p>
             </form>
           )}
 
-          <p className="text-center font-label-sm text-xs text-on-surface-variant mt-8">
-            New hain?{' '}
-            <Link to="/onboarding" className="text-primary hover:underline">
-              Free mein shuru karein →
-            </Link>
-          </p>
+          {/* ── SIGN UP FORM ── */}
+          {tab === 'signup' && (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div>
+                <h2 className="font-h3 text-[26px] text-on-surface mb-1">Create your account</h2>
+                <p className="text-on-surface-variant text-sm mb-6">Start growing your salon with AI</p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Salon Name</label>
+                  <div className="relative">
+                    <Scissors size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+                    <input
+                      type="text"
+                      value={salonName}
+                      onChange={e => setSalonName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-outline-variant rounded-xl text-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="e.g. Priya Beauty Parlour"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Email</label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-outline-variant rounded-xl text-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Password</label>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-11 py-3 border border-outline-variant rounded-xl text-sm bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="Min 8 characters"
+                      required
+                      minLength={8}
+                    />
+                    <button type="button" onClick={() => setShowPw(p => !p)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Confirm Password</label>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={confirm}
+                      onChange={e => setConfirm(e.target.value)}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm bg-surface focus:outline-none focus:ring-1 ${
+                        confirm && password !== confirm
+                          ? 'border-red-400 focus:border-red-400 focus:ring-red-400'
+                          : 'border-outline-variant focus:border-primary focus:ring-primary'
+                      }`}
+                      placeholder="Re-enter password"
+                      required
+                    />
+                  </div>
+                  {confirm && password !== confirm && (
+                    <p className="text-xs text-red-500 mt-1">Passwords don't match</p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || (confirm.length > 0 && password !== confirm)}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all disabled:opacity-60 mt-2 shadow-lg shadow-primary/20"
+              >
+                {loading ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Create Account <ArrowRight size={16} /></>
+                )}
+              </button>
+
+              <p className="text-center text-xs text-on-surface-variant mt-4">
+                Already have an account?{' '}
+                <button type="button" onClick={() => switchTab('signin')} className="text-primary font-semibold hover:underline">
+                  Sign in
+                </button>
+              </p>
+            </form>
+          )}
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

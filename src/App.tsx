@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
-import VerifyOTP from './pages/VerifyOTP';
 import Onboarding from './pages/Onboarding';
 import AppLayout from './layouts/AppLayout';
 import Dashboard from './pages/Dashboard';
@@ -28,7 +27,6 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/verify" element={<VerifyOTP />} />
           <Route path="/onboarding" element={<Onboarding />} />
 
           {/* Protected Routes inside Layout */}
@@ -51,4 +49,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

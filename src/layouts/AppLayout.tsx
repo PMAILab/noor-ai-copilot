@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Wand2, 
@@ -14,11 +14,27 @@ import {
   MessageCircle,
   BarChart,
   Users,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
 import Logo from '../components/Logo';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AppLayout() {
   const navigate = useNavigate();
+  const { user, loading, signOut, salon } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="bg-fdfaf6 text-on-surface font-body-md text-body-md min-h-screen flex">
@@ -82,13 +98,20 @@ export default function AppLayout() {
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
             </button>
             <div className="flex items-center gap-2 border-l border-outline-variant pl-4">
-              <div className="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center">
-                <UserCircle size={18} className="text-primary" />
+              <div className="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center font-bold text-xs text-primary">
+                {(salon?.salon_name || user?.email || '?')[0].toUpperCase()}
               </div>
               <div className="hidden sm:block">
-                <p className="font-label-sm text-xs text-on-surface font-bold">Ananya</p>
-                <p className="font-label-sm text-[10px] text-on-surface-variant">Roshan Plan</p>
+                <p className="font-label-sm text-xs text-on-surface font-bold">{salon?.salon_name || 'My Salon'}</p>
+                <p className="font-label-sm text-[10px] text-on-surface-variant truncate max-w-[120px]">{user?.email}</p>
               </div>
+              <button
+                onClick={() => { signOut(); navigate('/login'); }}
+                title="Sign Out"
+                className="ml-1 p-1.5 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <LogOut size={15} />
+              </button>
             </div>
           </div>
         </header>

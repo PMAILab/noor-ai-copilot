@@ -2,18 +2,21 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ChevronRight, Star, Camera, ExternalLink, Check,
-  AlertCircle, Wifi, WifiOff, RefreshCw, LogOut
+  AlertCircle, Wifi, WifiOff, RefreshCw, LogOut, Phone, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { buildMetaOAuthUrl } from '../lib/metaAds';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { isImageGenConfigured } from '../lib/imageGen';
 
-const META_APP_ID = (import.meta as any).env?.VITE_META_APP_ID || (import.meta as any).env?.META_APP_ID || '';
+const META_APP_ID = (import.meta as any).env?.VITE_META_APP_ID || '';
+// WA is server-side only — we check if the env hint is there
+const WA_CONFIGURED = Boolean((import.meta as any).env?.VITE_WA_CONFIGURED === 'true');
 
 export default function Settings() {
-  const { salon, isMockMode, signOut, user } = useAuth();
+  const { salon, signOut, user } = useAuth();
   const [params] = useSearchParams();
+  const [showWAGuide, setShowWAGuide] = useState(false);
 
   const metaConnected = params.get('meta_connected') === 'true' || Boolean(salon?.meta_access_token);
   const metaAccountName = params.get('account') || salon?.meta_ad_account_id || null;
@@ -49,16 +52,17 @@ export default function Settings() {
       accountName: metaAccountName,
       action: handleConnectMeta,
       actionLabel: metaConnected ? 'Reconnect' : 'Connect Account',
+      extraContent: null,
     },
     {
       id: 'whatsapp',
       name: 'WhatsApp Business',
-      desc: 'Connected via Cloud API for broadcasts & lead qualification',
+      desc: 'Connect WhatsApp Cloud API to send broadcasts and qualify leads',
       icon: '💬',
-      connected: Boolean((import.meta as any).env?.WA_TOKEN || true), // always shows as configured
-      accountName: (import.meta as any).env?.WA_PHONE_NUMBER_ID || 'Configured via env',
-      action: null,
-      actionLabel: 'Configured',
+      connected: WA_CONFIGURED,
+      accountName: WA_CONFIGURED ? 'Configured via environment' : null,
+      action: () => setShowWAGuide(v => !v),
+      actionLabel: WA_CONFIGURED ? 'View Setup' : 'How to Connect',
     },
     {
       id: 'supabase',
@@ -90,16 +94,10 @@ export default function Settings() {
       </div>
 
       {/* Status Bar */}
-      <div className={`mb-6 px-4 py-3 rounded-xl flex items-center gap-3 ${
-        isMockMode
-          ? 'bg-amber-50 border border-amber-200'
-          : 'bg-emerald-50 border border-emerald-200'
-      }`}>
-        {isMockMode ? <WifiOff size={16} className="text-amber-600" /> : <Wifi size={16} className="text-emerald-600" />}
-        <p className={`font-label-sm text-xs ${isMockMode ? 'text-amber-700' : 'text-emerald-700'}`}>
-          {isMockMode
-            ? 'Running in Demo Mode — Supabase and Meta APIs show simulated data'
-            : `Connected to Supabase · User: ${user?.phone || user?.email || 'authenticated'}`}
+      <div className="mb-6 px-4 py-3 rounded-xl flex items-center gap-3 bg-emerald-50 border border-emerald-200">
+        <Wifi size={16} className="text-emerald-600" />
+        <p className="font-label-sm text-xs text-emerald-700">
+          Connected to Supabase · User: {user?.email || 'authenticated'}
         </p>
       </div>
 
@@ -240,6 +238,70 @@ export default function Settings() {
                   </p>
                 </div>
               </div>
+
+              {/* ── WhatsApp Setup Guide ── */}
+              {showWAGuide && (
+                <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-6">
+                  <h3 className="font-h3 text-[18px] text-[#166534] mb-4 flex items-center gap-2">
+                    💬 How to Connect WhatsApp Business
+                  </h3>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        step: '1',
+                        title: 'Create a Meta App',
+                        desc: 'Go to developers.facebook.com → Create App → Business type. Add the WhatsApp product.',
+                        link: 'https://developers.facebook.com/apps',
+                        linkLabel: 'Open Meta Developers →',
+                      },
+                      {
+                        step: '2',
+                        title: 'Get your Phone Number ID & Token',
+                        desc: 'In your Meta App → WhatsApp → API Setup. Copy the Phone Number ID and generate a temporary access token.',
+                        link: null, linkLabel: null,
+                      },
+                      {
+                        step: '3',
+                        title: 'Add to your .env file',
+                        desc: 'Open your .env file and add: WA_PHONE_NUMBER_ID=your_id and WA_TOKEN=your_token. Restart the server.',
+                        link: null, linkLabel: null,
+                      },
+                      {
+                        step: '4',
+                        title: 'Add VITE_WA_CONFIGURED=true',
+                        desc: 'Also add VITE_WA_CONFIGURED=true to .env so the app shows WhatsApp as connected in Settings.',
+                        link: null, linkLabel: null,
+                      },
+                      {
+                        step: '5',
+                        title: 'Set up Webhook (for incoming messages)',
+                        desc: 'Run netlify dev → expose via ngrok → set the webhook URL in Meta App → WhatsApp → Configuration. Verify token: noor_webhook_2024',
+                        link: 'https://dashboard.ngrok.com',
+                        linkLabel: 'Get ngrok →',
+                      },
+                    ].map(s => (
+                      <div key={s.step} className="flex gap-4">
+                        <div className="w-7 h-7 rounded-full bg-[#166534] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                          {s.step}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-[#166534] mb-0.5">{s.title}</p>
+                          <p className="text-xs text-[#14532D]">{s.desc}</p>
+                          {s.link && (
+                            <a href={s.link} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-primary font-medium hover:underline mt-1 inline-flex items-center gap-1">
+                              {s.linkLabel} <ExternalLink size={11} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[#166534] mt-4 pt-4 border-t border-[#BBF7D0]">
+                    ⚠️ WhatsApp requires approved message templates for first outreach. Free-form messages only work within a 24-hour window after a customer messages you first.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

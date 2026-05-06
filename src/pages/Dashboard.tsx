@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { salon, isMockMode } = useAuth();
+  const { salon } = useAuth();
   const salonName = salon?.salon_name || 'Ananya';
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -15,7 +15,7 @@ export default function Dashboard() {
       {/* Welcome & Quick Actions Header */}
       <div className="flex flex-col lg:flex-row justify-between items-end gap-6">
         <div>
-          <h2 className="font-h1 text-[48px] text-on-surface mb-2">{greeting}, {salonName.split(' ')[0]} {isMockMode && <span className="text-base text-amber-500 font-body-md">(Demo)</span>}</h2>
+          <h2 className="font-h1 text-[48px] text-on-surface mb-2">{greeting}, {salonName.split(' ')[0]}</h2>
           <p className="font-body-lg text-[18px] text-on-surface-variant">
             Here is a quick overview of your salon's marketing performance.
           </p>
