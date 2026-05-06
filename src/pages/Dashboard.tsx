@@ -1,33 +1,53 @@
 import { useNavigate } from 'react-router-dom';
-import { Eye, Pointer, Sparkles, Megaphone, Users, Pause, Edit2 } from 'lucide-react';
+import { Eye, Pointer, Sparkles, Megaphone, Users, Pause, Edit2, TrendingUp, Calendar, CheckCircle2, BarChart, Wand2 } from 'lucide-react';
+import { MOCK_PLAN } from '../lib/mockData';
+import { formatCurrencyFull } from '../lib/utils/currency';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { salon, isMockMode } = useAuth();
+  const salonName = salon?.salon_name || 'Ananya';
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <div className="p-margin-page flex flex-col gap-section-gap max-w-7xl mx-auto w-full">
       {/* Welcome & Quick Actions Header */}
       <div className="flex flex-col lg:flex-row justify-between items-end gap-6">
         <div>
-          <h2 className="font-h1 text-[48px] text-on-surface mb-2">Good morning, Ananya</h2>
+          <h2 className="font-h1 text-[48px] text-on-surface mb-2">{greeting}, {salonName.split(' ')[0]} {isMockMode && <span className="text-base text-amber-500 font-body-md">(Demo)</span>}</h2>
           <p className="font-body-lg text-[18px] text-on-surface-variant">
             Here is a quick overview of your salon's marketing performance.
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3 flex-wrap">
           <button 
-            onClick={() => navigate('/campaigns')}
-            className="bg-surface-container-lowest border border-[#EDE8E0] text-on-surface font-label-sm text-[14px] px-6 py-3 rounded-full hover:bg-surface-container transition-colors shadow-soft flex items-center gap-2"
+            onClick={() => navigate('/broadcasts')}
+            className="bg-surface-container-lowest border border-[#EDE8E0] text-on-surface font-label-sm text-[14px] px-5 py-2.5 rounded-full hover:bg-surface-container transition-colors shadow-soft flex items-center gap-2"
           >
-            <Megaphone className="text-[#C8922A]" size={20} />
-            📢 Broadcast Bhejo
+            <Megaphone className="text-[#C8922A]" size={18} />
+            Broadcast
           </button>
           <button 
             onClick={() => navigate('/inbox')}
-            className="bg-surface-container-lowest border border-[#EDE8E0] text-on-surface font-label-sm text-[14px] px-6 py-3 rounded-full hover:bg-surface-container transition-colors shadow-soft flex items-center gap-2"
+            className="bg-surface-container-lowest border border-[#EDE8E0] text-on-surface font-label-sm text-[14px] px-5 py-2.5 rounded-full hover:bg-surface-container transition-colors shadow-soft flex items-center gap-2"
           >
-            <Users className="text-primary" size={20} />
-            👥 Leads Dekho
+            <Users className="text-primary" size={18} />
+            Leads
+          </button>
+          <button 
+            onClick={() => navigate('/reports')}
+            className="bg-surface-container-lowest border border-[#EDE8E0] text-on-surface font-label-sm text-[14px] px-5 py-2.5 rounded-full hover:bg-surface-container transition-colors shadow-soft flex items-center gap-2"
+          >
+            <BarChart size={18} className="text-primary" />
+            Reports
+          </button>
+          <button 
+            onClick={() => navigate('/marketing-plan')}
+            className="bg-primary text-white font-label-sm text-[14px] px-5 py-2.5 rounded-full hover:bg-primary/90 transition-colors shadow-md flex items-center gap-2"
+          >
+            <Wand2 size={18} />
+            Build Plan
           </button>
         </div>
       </div>
@@ -81,6 +101,40 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Plan Progress Card */}
+      <div className="bg-gradient-to-r from-primary/8 to-primary-container/20 border border-primary/20 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Wand2 size={22} className="text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-label-sm text-xs text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded-full">Active Plan</span>
+            </div>
+            <p className="font-h3 text-[16px] text-on-surface">{MOCK_PLAN.goal}</p>
+            <div className="flex items-center gap-3 mt-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-32 h-1.5 bg-surface-variant rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${(MOCK_PLAN.actionsCompleted / MOCK_PLAN.actionsTotal) * 100}%` }}
+                  />
+                </div>
+                <span className="font-label-sm text-xs text-on-surface-variant">
+                  {MOCK_PLAN.actionsCompleted}/{MOCK_PLAN.actionsTotal} actions done this month
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/marketing-plan')}
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-label-sm text-sm hover:bg-primary/90 transition-colors flex-shrink-0"
+        >
+          <CheckCircle2 size={16} /> View Full Plan
+        </button>
       </div>
 
       {/* Active Campaign & Lower Section Grid */}

@@ -1,43 +1,62 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import React from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Wand2, 
-  Megaphone, 
+  Calendar, 
   Send, 
   BarChart2, 
   Settings as SettingsIcon,
   Plus,
   Search,
   Bell,
-  UserCircle
+  UserCircle,
+  MessageCircle,
+  BarChart,
+  Users,
 } from 'lucide-react';
 import Logo from '../components/Logo';
 
 export default function AppLayout() {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-fdfaf6 text-on-surface font-body-md text-body-md min-h-screen flex">
       {/* SideNavBar */}
-      <nav className="bg-surface-container-lowest dark:bg-surface-container-low fixed left-0 top-0 h-screen w-[240px] border-r border-outline-variant flex flex-col py-8 z-50">
+      <nav className="bg-surface-container-lowest dark:bg-surface-container-low fixed left-0 top-0 h-screen w-[240px] border-r border-outline-variant flex flex-col py-8 z-50 overflow-y-auto">
         <div className="px-6 mb-8">
           <Logo className="w-full h-auto mb-2" />
           <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">AI Marketing Co-pilot</p>
         </div>
 
-        <div className="flex-1 flex flex-col gap-2">
-          <NavItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-          <NavItem to="/marketing-plan" icon={<Wand2 size={20} />} label="Marketing Plan" />
-          <NavItem to="/social-media" icon={<Megaphone size={20} />} label="Social Media" />
-          <NavItem to="/campaigns" icon={<Send size={20} />} label="Campaigns" />
-          <NavItem to="/insights" icon={<BarChart2 size={20} />} label="Client Insights" />
-          <div className="mt-auto">
-            <NavItem to="/settings" icon={<SettingsIcon size={20} />} label="Settings" />
+        <div className="flex-1 flex flex-col gap-0.5 px-2">
+          <p className="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-widest px-4 mb-1 mt-2">Main</p>
+          <NavItem to="/dashboard" icon={<LayoutDashboard size={18} />} label="Dashboard" />
+          <NavItem to="/marketing-plan" icon={<Wand2 size={18} />} label="Marketing Plan" />
+          <NavItem to="/campaigns" icon={<Send size={18} />} label="Campaigns" end />
+          
+          <p className="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-widest px-4 mb-1 mt-4">Outreach</p>
+          <NavItem to="/broadcasts" icon={<MessageCircle size={18} />} label="WA Broadcasts" />
+          <NavItem to="/social-media" icon={<Calendar size={18} />} label="Festival Calendar" />
+          
+          <p className="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-widest px-4 mb-1 mt-4">Insights</p>
+          <NavItem to="/inbox" icon={<Users size={18} />} label="Lead Inbox" />
+          <NavItem to="/insights" icon={<BarChart2 size={18} />} label="Analytics" />
+          <NavItem to="/reports" icon={<BarChart size={18} />} label="ROI Reports" />
+          
+          <div className="mt-auto pt-4">
+            <div className="h-px bg-outline-variant mx-2 mb-3" />
+            <NavItem to="/settings" icon={<SettingsIcon size={18} />} label="Settings" />
           </div>
         </div>
 
-        <div className="px-6 mt-6">
-          <button className="w-full bg-primary-container text-on-primary py-3 rounded-full font-label-sm text-label-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-            <Plus size={18} />
-            Launch New Campaign
+        <div className="px-4 mt-4">
+          <button
+            onClick={() => navigate('/campaigns/new')}
+            className="w-full bg-primary text-white py-3 rounded-xl font-label-sm text-[13px] hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-md"
+          >
+            <Plus size={16} />
+            New Campaign
           </button>
         </div>
       </nav>
@@ -45,69 +64,59 @@ export default function AppLayout() {
       {/* Main Content Area */}
       <main className="ml-[240px] flex-1 flex flex-col min-h-screen">
         {/* TopNavBar */}
-        <header className="bg-surface dark:bg-surface docked full-width top-0 sticky z-40 shadow-sm flex justify-between items-center h-20 px-margin-page w-full">
-          <div className="flex items-center gap-8">
-            <h1 className="font-h2 text-h2 text-primary tracking-tight">Noor</h1>
-            <div className="flex items-center bg-surface-container-lowest border border-ede8e0 rounded-full px-4 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-              <Search className="text-outline mr-2" size={18} />
+        <header className="bg-surface dark:bg-surface fixed top-0 right-0 left-[240px] z-40 shadow-sm flex justify-between items-center h-16 px-8 w-auto border-b border-outline-variant">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+              <Search className="text-outline mr-2" size={16} />
               <input 
-                className="bg-transparent border-none focus:ring-0 text-body-md font-body-md text-on-surface placeholder-outline-variant outline-none w-64" 
-                placeholder="Search..." 
+                className="bg-transparent border-none focus:ring-0 font-body-md text-sm text-on-surface placeholder-outline-variant outline-none w-52" 
+                placeholder="Search campaigns, leads..." 
                 type="text" 
               />
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            <nav className="flex gap-6">
-              <NavLink 
-                to="/insights" 
-                className={({ isActive }) => `font-label-sm text-label-sm transition-colors ${isActive ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`}
-              >
-                Analytics
-              </NavLink>
-              <NavLink 
-                to="/inbox" 
-                className={({ isActive }) => `font-label-sm text-label-sm transition-colors ${isActive ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`}
-              >
-                Inbox
-              </NavLink>
-            </nav>
-            <div className="flex items-center gap-4 border-l border-outline-variant pl-6">
-              <button className="text-on-surface-variant hover:text-primary transition-colors">
-                <Bell size={20} />
-              </button>
-              <button className="text-on-surface-variant hover:text-primary transition-colors">
-                <UserCircle size={20} />
-              </button>
-              <span className="text-primary-container font-label-sm text-label-sm border border-primary-container rounded-full px-3 py-1 bg-surface-container-high">
-                Pro Plan
-              </span>
-              <a href="#" className="text-on-surface-variant font-label-sm text-label-sm hover:text-primary">Support</a>
+          <div className="flex items-center gap-4">
+            <button className="text-on-surface-variant hover:text-primary transition-colors relative">
+              <Bell size={18} />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+            </button>
+            <div className="flex items-center gap-2 border-l border-outline-variant pl-4">
+              <div className="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center">
+                <UserCircle size={18} className="text-primary" />
+              </div>
+              <div className="hidden sm:block">
+                <p className="font-label-sm text-xs text-on-surface font-bold">Ananya</p>
+                <p className="font-label-sm text-[10px] text-on-surface-variant">Roshan Plan</p>
+              </div>
             </div>
           </div>
         </header>
 
-        <Outlet />
+        {/* Page content — offset by header height */}
+        <div className="mt-16 flex-1">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
 }
 
-function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function NavItem({ to, icon, label, end }: { to: string; icon: React.ReactNode; label: string; end?: boolean }) {
   return (
     <NavLink 
-      to={to} 
+      to={to}
+      end={end}
       className={({ isActive }) => 
-        `flex items-center gap-3 px-6 py-3 transition-all duration-200 ${
+        `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-150 ${
           isActive 
-            ? 'text-primary font-bold border-l-4 border-primary bg-surface-container-high scale-[0.99]' 
-            : 'text-on-surface-variant font-medium hover:bg-surface-container hover:text-primary'
+            ? 'text-primary font-bold bg-primary/10' 
+            : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
         }`
       }
     >
       {icon}
-      <span>{label}</span>
+      <span className="font-label-sm text-[13px]">{label}</span>
     </NavLink>
   );
 }

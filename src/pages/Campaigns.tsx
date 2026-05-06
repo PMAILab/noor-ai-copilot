@@ -1,164 +1,243 @@
-import { useState } from 'react';
-import { Sparkles, CheckCircle2 } from 'lucide-react';
-import CampaignBuilderModal from '../components/CampaignBuilderModal';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Plus, Pause, Play, Edit2, TrendingUp, Flame, Target, CheckCircle2,
+  Sparkles, BarChart2, Loader2
+} from 'lucide-react';
+import { formatCurrencyFull } from '../lib/utils/currency';
+import { getSupabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
-export default function Campaigns() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+type CampaignStatus = 'active' | 'paused' | 'completed' | 'draft' | 'pending_meta' | 'pending_approval' | 'failed';
+
+interface CampaignRow {
+  id: string;
+  goal_text: string;
+  recipe_type: string;
+  status: CampaignStatus;
+  daily_budget_inr: number;
+  total_budget_inr: number;
+  total_spent_inr: number;
+  enquiry_count: number;
+  hot_lead_count: number;
+  booking_count: number;
+  cost_per_lead: number | null;
+  launched_at: string | null;
+  meta_campaign_id: string | null;
+  ad_image_url: string | null;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  active:           { label: 'Live',             color: 'bg-[#22C55E]/15 text-[#22C55E]',    dot: 'bg-[#22C55E]' },
+  paused:           { label: 'Paused',            color: 'bg-amber-100 text-amber-700',        dot: 'bg-amber-500' },
+  completed:        { label: 'Completed',         color: 'bg-surface-container text-on-surface-variant', dot: 'bg-outline' },
+  draft:            { label: 'Draft',             color: 'bg-blue-50 text-blue-600',           dot: 'bg-blue-400' },
+  pending_meta:     { label: 'Pending Setup',     color: 'bg-purple-50 text-purple-700',       dot: 'bg-purple-400' },
+  pending_approval: { label: 'Pending Approval',  color: 'bg-purple-50 text-purple-700',       dot: 'bg-purple-400' },
+  failed:           { label: 'Failed',            color: 'bg-red-50 text-red-600',             dot: 'bg-red-500' },
+};
+
+const RECIPE_LABELS: Record<string, string> = {
+  festival_offer: 'Festival Offer', weekday_filler: 'Weekday Filler',
+  win_back: 'Win-Back', bridal_season: 'Bridal Season',
+  new_service: 'New Service', custom: 'Custom',
+};
+
+function CampaignCard({ campaign }: { campaign: CampaignRow }) {
+  const status = STATUS_CONFIG[campaign.status] || STATUS_CONFIG.draft;
+  const spendPercent = campaign.total_budget_inr > 0
+    ? Math.min(100, (campaign.total_spent_inr / campaign.total_budget_inr) * 100) : 0;
+  const launchDate = campaign.launched_at
+    ? new Date(campaign.launched_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : null;
 
   return (
-    <div className="p-margin-page grid grid-cols-12 gap-gutter max-w-7xl mx-auto w-full">
-      {/* Header Section */}
-      <div className="col-span-12 mb-section-gap flex justify-between items-end">
+    <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden hover:shadow-md transition-all">
+      {campaign.status === 'active' && <div className="h-1 bg-gradient-to-r from-primary to-primary-container" />}
+
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={`inline-flex items-center gap-1.5 font-label-sm text-xs px-2.5 py-1 rounded-full ${status.color}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${campaign.status === 'active' ? 'animate-pulse' : ''}`} />
+                {status.label}
+              </span>
+              <span className="font-label-sm text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+                {RECIPE_LABELS[campaign.recipe_type] || campaign.recipe_type}
+              </span>
+            </div>
+            <h3 className="font-h3 text-[17px] text-on-surface leading-snug pr-4 truncate" title={campaign.goal_text}>
+              {campaign.goal_text}
+            </h3>
+            {launchDate && <p className="font-label-sm text-xs text-on-surface-variant mt-1">Launched {launchDate}</p>}
+          </div>
+
+          <div className="flex gap-2 flex-shrink-0">
+            {campaign.status === 'active' && (
+              <button className="p-2 border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-container transition-colors" title="Pause">
+                <Pause size={15} />
+              </button>
+            )}
+            {campaign.status === 'paused' && (
+              <button className="p-2 border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-container transition-colors" title="Resume">
+                <Play size={15} />
+              </button>
+            )}
+            <button className="p-2 border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-container transition-colors" title="Edit">
+              <Edit2 size={15} />
+            </button>
+          </div>
+        </div>
+
+        {campaign.ad_image_url && (
+          <div className="mb-4 rounded-xl overflow-hidden h-32">
+            <img src={campaign.ad_image_url} alt="Ad creative" className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        <div className="mb-4">
+          <div className="flex justify-between font-label-sm text-xs text-on-surface-variant mb-1.5">
+            <span>Spend: {formatCurrencyFull(campaign.total_spent_inr)} / {formatCurrencyFull(campaign.total_budget_inr)}</span>
+            <span>{Math.round(spendPercent)}%</span>
+          </div>
+          <div className="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${spendPercent >= 90 ? 'bg-red-400' : spendPercent >= 70 ? 'bg-amber-400' : 'bg-primary'}`}
+              style={{ width: `${spendPercent}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-px bg-outline-variant rounded-xl overflow-hidden">
+          {[
+            { icon: <Target size={13} />, label: 'Enquiries', value: campaign.enquiry_count, color: 'text-primary' },
+            { icon: <Flame size={13} />, label: 'Hot Leads', value: campaign.hot_lead_count, color: 'text-red-500' },
+            { icon: <CheckCircle2 size={13} />, label: 'Bookings', value: campaign.booking_count, color: campaign.booking_count > 0 ? 'text-[#22C55E]' : 'text-on-surface-variant' },
+            { icon: <TrendingUp size={13} />, label: '₹/Lead', value: campaign.cost_per_lead ? `₹${campaign.cost_per_lead}` : '—', color: 'text-on-surface' },
+          ].map(m => (
+            <div key={m.label} className="bg-surface-container-lowest p-3 text-center">
+              <div className={`flex items-center justify-center gap-1 mb-1 ${m.color}`}>{m.icon}</div>
+              <p className={`font-number-data text-[18px] font-bold ${m.color}`}>{m.value}</p>
+              <p className="font-label-sm text-[10px] text-on-surface-variant">{m.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Campaigns() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [filter, setFilter] = useState<'all' | CampaignStatus>('all');
+  const [allCampaigns, setAllCampaigns] = useState<CampaignRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb || !user?.id) { setLoading(false); return; }
+
+    (sb.from as any)('campaigns')
+      .select('*')
+      .eq('salon_id', user.id)
+      .order('launched_at', { ascending: false })
+      .then(({ data, error }: { data: any; error: any }) => {
+        if (!error && data) setAllCampaigns(data as CampaignRow[]);
+        setLoading(false);
+      });
+  }, [user?.id]);
+
+  const campaigns = filter === 'all' ? allCampaigns : allCampaigns.filter(c => c.status === filter);
+  const totalSpend = allCampaigns.reduce((s, c) => s + (c.total_spent_inr || 0), 0);
+  const totalLeads = allCampaigns.reduce((s, c) => s + (c.enquiry_count || 0), 0);
+  const totalBookings = allCampaigns.reduce((s, c) => s + (c.booking_count || 0), 0);
+  const activeCampaigns = allCampaigns.filter(c => c.status === 'active').length;
+
+  return (
+    <div className="p-margin-page max-w-7xl mx-auto w-full">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-8">
         <div>
-          <h1 className="font-h1 text-[48px] text-on-surface mb-2 tracking-tight">WhatsApp Broadcast</h1>
-          <p className="font-body-lg text-[18px] text-on-surface-variant">Select a segment and a template recommended by Noor to start your campaign.</p>
+          <h1 className="font-h1 text-[42px] text-on-surface mb-2">Campaigns</h1>
+          <p className="font-body-lg text-[18px] text-on-surface-variant">
+            Meta Ads campaigns managed by Noor — launch, monitor, and optimise.
+          </p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-primary-container text-on-primary py-2 px-6 rounded-full font-label-sm text-[14px] hover:bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2"
+        <button
+          onClick={() => navigate('/campaigns/new')}
+          className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-label-sm text-sm font-bold hover:bg-primary/90 transition-all shadow-lg flex-shrink-0"
         >
-          Open Campaign Builder
+          <Plus size={18} /> New Campaign
         </button>
       </div>
 
-      {/* Left Column: Segments */}
-      <div className="col-span-12 lg:col-span-3 flex flex-col gap-4">
-        <h3 className="font-h3 text-[24px] text-on-surface border-b border-[#EDE8E0] pb-2 mb-2">Audience Segment</h3>
-        
-        <button className="w-full text-left bg-surface-container-highest rounded-lg p-4 flex justify-between items-center shadow-soft border-l-4 border-[#C8922A] transition-all">
-          <div>
-            <span className="block font-label-sm text-[14px] font-bold text-on-surface mb-1">Regulars</span>
-            <span className="block font-body-md text-[16px] text-on-surface-variant">Visited in last 30 days</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Total Spend', value: formatCurrencyFull(totalSpend), icon: <BarChart2 size={18} className="text-primary" />, bg: 'bg-primary/5 border-primary/20' },
+          { label: 'Active Campaigns', value: `${activeCampaigns}`, icon: <Sparkles size={18} className="text-[#22C55E]" />, bg: 'bg-[#22C55E]/5 border-[#22C55E]/20' },
+          { label: 'Total Enquiries', value: `${totalLeads}`, icon: <Target size={18} className="text-[#C8922A]" />, bg: 'bg-[#C8922A]/5 border-[#C8922A]/20' },
+          { label: 'Total Bookings', value: `${totalBookings}`, icon: <CheckCircle2 size={18} className="text-primary" />, bg: 'bg-primary/5 border-primary/20' },
+        ].map(s => (
+          <div key={s.label} className={`rounded-2xl border p-5 ${s.bg}`}>
+            <div className="mb-2">{s.icon}</div>
+            <p className="font-number-data text-[28px] font-bold text-on-surface">{s.value}</p>
+            <p className="font-label-sm text-xs text-on-surface-variant mt-1">{s.label}</p>
           </div>
-          <span className="bg-white text-primary font-number-data px-3 py-1 rounded-full text-sm shadow-sm">142</span>
-        </button>
-
-        <button className="w-full text-left bg-white rounded-lg p-4 flex justify-between items-center shadow-soft hover:bg-surface-container transition-all">
-          <div>
-            <span className="block font-label-sm text-[14px] font-bold text-on-surface mb-1">Occasional</span>
-            <span className="block font-body-md text-[16px] text-on-surface-variant">Visited 2-3 months ago</span>
-          </div>
-          <span className="bg-surface-container-high text-on-surface font-number-data px-3 py-1 rounded-full text-sm">86</span>
-        </button>
-
-        <button className="w-full text-left bg-white rounded-lg p-4 flex justify-between items-center shadow-soft hover:bg-surface-container transition-all">
-          <div>
-            <span className="block font-label-sm text-[14px] font-bold text-on-surface mb-1">Lapsed</span>
-            <span className="block font-body-md text-[16px] text-on-surface-variant">No visit in 6+ months</span>
-          </div>
-          <span className="bg-surface-container-high text-on-surface font-number-data px-3 py-1 rounded-full text-sm">215</span>
-        </button>
-
-        <button className="w-full text-left bg-white rounded-lg p-4 flex justify-between items-center shadow-soft hover:bg-surface-container transition-all">
-          <div>
-            <span className="block font-label-sm text-[14px] font-bold text-on-surface mb-1">New</span>
-            <span className="block font-body-md text-[16px] text-on-surface-variant">First visit this month</span>
-          </div>
-          <span className="bg-surface-container-high text-on-surface font-number-data px-3 py-1 rounded-full text-sm">34</span>
-        </button>
+        ))}
       </div>
 
-      {/* Centre Column: Templates */}
-      <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
-        <h3 className="font-h3 text-[24px] text-on-surface border-b border-[#EDE8E0] pb-2 mb-2 flex items-center gap-2">
-          <Sparkles className="text-[#C8922A]" size={24} />
-          Recommended Templates
-        </h3>
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'active', label: '🟢 Live' },
+          { id: 'paused', label: '⏸ Paused' },
+          { id: 'completed', label: '✓ Completed' },
+        ].map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id as typeof filter)}
+            className={`px-4 py-2 rounded-full font-label-sm text-sm transition-all ${
+              filter === f.id ? 'bg-primary text-white shadow-sm' : 'border border-outline-variant text-on-surface-variant hover:border-primary/40'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Template Card 1 (Active) */}
-        <div className="bg-white rounded-[16px] p-card-padding shadow-[0_4px_24px_rgba(200,146,42,0.15)] border border-[#C8922A] relative overflow-hidden group cursor-pointer transition-all hover:shadow-lg">
-          <div className="absolute top-0 right-0 bg-[#C8922A] text-white font-label-sm text-[14px] px-4 py-1 rounded-bl-lg">Recommended</div>
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="font-h3 text-[24px] text-on-surface pr-12">Monsoon Hair Spa Offer</h4>
-          </div>
-          <div className="bg-surface-container-low p-4 rounded-lg mb-6">
-            <p className="font-body-md text-[16px] text-on-surface-variant line-clamp-3">
-              "Hi [Name], rainy season taking a toll on your hair? 🌧️ Treat yourself to our rejuvenating Moroccan Spa therapy. Special 20% off for our regular clients this week! Book your slot now: [Link]"
-            </p>
-          </div>
-          <button className="w-full bg-surface-container border border-[#C8922A] text-tertiary-container py-3 rounded-full font-label-sm text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-[#C8922A] hover:text-white transition-colors">
-            <CheckCircle2 size={20} />
-            Use This Template
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-on-surface-variant">
+          <Loader2 size={32} className="animate-spin mr-3" />
+          <span className="font-body-md">Loading campaigns...</span>
+        </div>
+      ) : campaigns.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {campaigns.map(c => <div key={c.id}><CampaignCard campaign={c} /></div>)}
+        </div>
+      ) : (
+        <div className="text-center py-20 text-on-surface-variant">
+          <Sparkles size={40} className="mx-auto mb-4 opacity-30" />
+          <p className="font-h3 text-[18px] mb-2">No campaigns yet</p>
+          <p className="font-body-md text-sm mb-6">Launch your first campaign and Noor will manage the rest.</p>
+          <button onClick={() => navigate('/campaigns/new')} className="px-6 py-3 bg-primary text-white rounded-xl font-label-sm text-sm hover:bg-primary/90 transition-colors">
+            <Plus size={16} className="inline mr-2" /> New Campaign
           </button>
         </div>
+      )}
 
-        {/* Template Card 2 */}
-        <div className="bg-white rounded-[16px] p-card-padding shadow-soft border border-transparent hover:border-[#EDE8E0] transition-all cursor-pointer">
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="font-h3 text-[24px] text-on-surface">Weekend Glow-up</h4>
+      {activeCampaigns > 0 && (
+        <div className="mt-8 bg-gradient-to-r from-primary/8 to-primary-container/15 border border-primary/20 rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
+            <Sparkles size={20} className="text-white" />
           </div>
-          <div className="bg-surface-container-lowest p-4 rounded-lg mb-6 border border-[#EDE8E0]">
-            <p className="font-body-md text-[16px] text-on-surface-variant line-clamp-3">
-              "Hey [Name]! ✨ Ready for the weekend? Drop by for a quick touch-up and get a complimentary nail art with any service over ₹1500. Valid till Sunday."
+          <div>
+            <p className="font-label-sm text-sm text-primary font-bold mb-1">Noor Suggestion</p>
+            <p className="font-body-md text-sm text-on-surface">
+              Your active campaigns are running. Consider A/B testing a second ad variant to reduce your cost per lead.
             </p>
           </div>
-          <button className="w-full bg-white border border-[#EDE8E0] text-on-surface py-3 rounded-full font-label-sm text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors">
-            Preview Template
-          </button>
         </div>
-      </div>
-
-      {/* Right Column: Preview & Action */}
-      <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-        <h3 className="font-h3 text-[24px] text-on-surface border-b border-[#EDE8E0] pb-2 mb-2">Live Preview</h3>
-        
-        {/* Phone Mockup */}
-        <div className="bg-[#ECE5DD] rounded-[2rem] p-4 shadow-xl border-[8px] border-inverse-surface relative overflow-hidden h-[450px] flex flex-col">
-          {/* Phone Header */}
-          <div className="bg-[#075E54] text-white p-3 rounded-t-xl flex items-center gap-3 shadow-md z-10 -mx-4 -mt-4 mb-4">
-            <span className="material-symbols-outlined">arrow_back</span>
-            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center text-primary font-bold text-xs">A</div>
-            <div>
-              <div className="font-body-md font-bold text-[15px]">Aura Salon & Spa</div>
-              <div className="text-[12px] opacity-80">business account</div>
-            </div>
-          </div>
-          
-          {/* Chat Area */}
-          <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col justify-end gap-2 relative">
-            <div className="self-center bg-[#E1F3FB] text-[#4A5568] text-[12px] px-3 py-1 rounded-lg mb-2 shadow-sm">
-              TODAY
-            </div>
-            {/* Message Bubble */}
-            <div className="bg-white rounded-lg rounded-tr-none p-3 max-w-[85%] self-end shadow-sm relative text-[#303030]">
-              <p className="font-body-md text-[14px] leading-snug mb-1">
-                Hi Priya, rainy season taking a toll on your hair? 🌧️ Treat yourself to our rejuvenating Moroccan Spa therapy. 
-              </p>
-              <p className="font-body-md text-[14px] leading-snug mb-2 font-medium">
-                Special 20% off for our regular clients this week!
-              </p>
-              <a href="#" className="text-[#027EB5] text-[14px] mb-2 block truncate">https://aura.book/spa-offer</a>
-              <div className="text-right text-[11px] text-[#999999] mt-1 flex justify-end items-center gap-1">
-                10:42 AM <span className="material-symbols-outlined text-[14px]">done_all</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Area */}
-        <div className="bg-white rounded-[16px] p-6 shadow-[0_2px_16px_rgba(0,0,0,0.06)] mt-auto">
-          <div className="bg-secondary-container bg-opacity-20 border-l-4 border-secondary-container p-4 rounded-r-lg mb-6 flex items-start gap-3">
-            <span className="material-symbols-outlined text-secondary-container mt-1">lightbulb</span>
-            <div>
-              <span className="block font-label-sm text-[14px] font-bold text-on-surface mb-1">Noor AI Insight</span>
-              <p className="font-hindi-text text-on-surface-variant text-sm">
-                Kal 10 AM ko bhejne ki salah. (Recommended send time: Tomorrow at 10 AM for highest engagement based on past data).
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-3">
-            <button className="w-full bg-[#25D366] text-white py-4 rounded-full font-label-sm text-[14px] font-bold shadow-lg hover:bg-[#128C7E] transition-colors flex items-center justify-center gap-2 text-lg">
-              <span className="material-symbols-outlined">send</span>
-              Send to 142 Regulars
-            </button>
-            <button className="w-full bg-white border border-[#EDE8E0] text-on-surface-variant py-3 rounded-full font-label-sm text-[14px] font-bold hover:bg-surface-container transition-colors">
-              Schedule for Later
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {isModalOpen && <CampaignBuilderModal onClose={() => setIsModalOpen(false)} />}
+      )}
     </div>
   );
 }

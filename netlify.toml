@@ -1,0 +1,40 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[dev]
+  command = "npm run dev"
+  port = 8888
+  targetPort = 3000
+  autoLaunch = false
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Proxy /api/* → /.netlify/functions/*
+[[redirects]]
+  from = "/api/send-whatsapp"
+  to = "/.netlify/functions/send-whatsapp"
+  status = 200
+
+[[redirects]]
+  from = "/api/create-meta-campaign"
+  to = "/.netlify/functions/create-meta-campaign"
+  status = 200
+
+[[redirects]]
+  from = "/api/meta-oauth"
+  to = "/.netlify/functions/meta-oauth-callback"
+  status = 200
+
+[[redirects]]
+  from = "/webhook/whatsapp"
+  to = "/.netlify/functions/whatsapp-webhook"
+  status = 200
+
+# SPA fallback — must be last
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
